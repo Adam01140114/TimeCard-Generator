@@ -11,7 +11,7 @@ Fill in the days you worked and download a signed, print-ready time card PDF. Bu
 - **Multiple cards.** Each card prints on its own page, and long cards continue onto a second page.
 - **Signed automatically.** Each card is signed with the employee's name in a handwritten script font and dated with the card's last day.
 - **Preview, download or share.** On phones, Share opens the system share sheet so you can send the PDF by email or text.
-- **Private.** Everything runs in your browser and nothing is uploaded. If you choose, your name, position and company are remembered on your device.
+- **Private.** Everything runs in your browser and nothing is uploaded. If you choose, your name, position and service are remembered on your device.
 - **Works offline** after the first visit, and can be added to your home screen.
 
 ## Running it locally

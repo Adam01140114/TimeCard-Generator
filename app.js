@@ -634,7 +634,7 @@
       fill(COLORS.box);
       doc.roundedRect(M, y, CONTENT_W, boxH, 6, 6, 'F');
       const fields = [['EMPLOYEE', name]];
-      if (company) fields.push(['COMPANY', company]);
+      if (company) fields.push(['SERVICE', company]);
       fields.push(['PAY PERIOD', range]);
       const weights = fields.length === 3 ? [0.36, 0.34, 0.30] : [0.56, 0.44];
       let fx = M;
