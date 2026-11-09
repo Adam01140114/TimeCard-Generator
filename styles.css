@@ -165,7 +165,7 @@ a { color: var(--accent); }
 
 /* ---------- Intro ---------- */
 
-main { padding-top: 16px; }
+main { padding-top: 16px; padding-bottom: 20px; }
 
 .sr-only {
   position: absolute;
@@ -463,18 +463,6 @@ input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(
   margin-top: 16px;
 }
 
-/* ---------- Footer ---------- */
-
-.site-footer {
-  padding: 28px 4px 24px;
-  text-align: center;
-  color: var(--text-3);
-  font-size: 13.5px;
-  display: grid;
-  gap: 4px;
-}
-.site-footer a { color: var(--text-2); }
-
 /* ---------- Action bar ---------- */
 
 .actionbar {
@@ -579,5 +567,5 @@ input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(
 }
 
 @media print {
-  .topbar, .actionbar, .toast, .site-footer { display: none; }
+  .topbar, .actionbar, .toast { display: none; }
 }

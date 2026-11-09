@@ -187,10 +187,10 @@
     state.cards.forEach((card, ci) => {
       const cardEl = tplCard.content.firstElementChild.cloneNode(true);
       cardEl.dataset.cardId = card.id;
-      $('.tc-card-name', cardEl).textContent = multiCard ? `Card ${ci + 1}` : 'Card';
+      $('.tc-card-name', cardEl).textContent = multiCard ? `Page ${ci + 1}` : 'Page';
       const removeCard = $('[data-action="remove-card"]', cardEl);
       removeCard.hidden = !multiCard;
-      removeCard.setAttribute('aria-label', `Remove card ${ci + 1}`);
+      removeCard.setAttribute('aria-label', `Remove page ${ci + 1}`);
 
       const daysEl = $('.days', cardEl);
       card.days.forEach((day, di) => {
@@ -199,7 +199,7 @@
         $('.day-num', dayEl).textContent = `Day ${di + 1}`;
         const removeDay = $('[data-action="remove-day"]', dayEl);
         removeDay.hidden = card.days.length < 2;
-        removeDay.setAttribute('aria-label', `Remove day ${di + 1}${multiCard ? ` from card ${ci + 1}` : ''}`);
+        removeDay.setAttribute('aria-label', `Remove day ${di + 1}${multiCard ? ` from page ${ci + 1}` : ''}`);
 
         FIELDS.forEach((field) => {
           const input = $(`[data-field="${field}"]`, dayEl);
@@ -278,7 +278,7 @@
     const total = $('.tc-card-total', cardEl);
     const strong = document.createElement('strong');
     strong.textContent = `${fmtHours(cardMinutes(card))} h`;
-    total.replaceChildren('Card total ', strong);
+    total.replaceChildren('Page total ', strong);
   }
 
   function updateGrandTotal() {
@@ -389,12 +389,12 @@
       case 'remove-card': {
         if (!card || state.cards.length < 2) return;
         const filled = card.days.some((d) => FIELDS.some((f) => d[f]));
-        if (filled && !window.confirm('Remove this card and all of its days?')) return;
+        if (filled && !window.confirm('Remove this page and all of its days?')) return;
         const index = state.cards.indexOf(card);
         state.cards.splice(index, 1);
         const neighbour = state.cards[Math.max(0, index - 1)];
         render(`d${neighbour.days[0].id}-date`);
-        toast('Card removed');
+        toast('Page removed');
         break;
       }
       case 'reset': {
@@ -630,12 +630,6 @@
         color(COLORS.accent);
         doc.text(kickerText, M, y, { charSpace: 1.2 });
       }
-      if (cardCount > 1) {
-        font('normal', 8.5);
-        color(COLORS.faint);
-        doc.text(`Card ${cardIndex + 1} of ${cardCount}`, PAGE_W - M, y, { align: 'right' });
-      }
-
       y += 26;
       font('bold', continued ? 15 : 22);
       color(COLORS.ink);
