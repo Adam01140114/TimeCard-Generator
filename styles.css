@@ -255,7 +255,7 @@ input[type="time"] {
   appearance: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
-input[type="date"], input[type="time"] { padding: 0 8px 0 12px; }
+input[type="date"], input[type="time"] { padding: 0 8px 0 12px; cursor: pointer; }
 input::placeholder { color: var(--text-3); opacity: 1; }
 input[type="date"]::-webkit-date-and-time-value,
 input[type="time"]::-webkit-date-and-time-value { text-align: left; min-height: 1.5em; }

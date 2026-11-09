@@ -311,6 +311,19 @@
   cardsEl.addEventListener('input', onDayInput);
   cardsEl.addEventListener('change', onDayInput);
 
+  // Desktop browsers only open the date/time picker from the small icon.
+  // Open it on a click anywhere in the field. (Phones already do this on tap.)
+  const finePointer = window.matchMedia('(pointer: fine)');
+  cardsEl.addEventListener('click', (e) => {
+    const input = e.target.closest('input[type="date"], input[type="time"]');
+    if (!input || !finePointer.matches || typeof input.showPicker !== 'function') return;
+    try {
+      input.showPicker();
+    } catch {
+      /* Not allowed in this context; the icon still opens it. */
+    }
+  });
+
   function onDayInput(e) {
     const input = e.target.closest('[data-field]');
     if (!input) return;
