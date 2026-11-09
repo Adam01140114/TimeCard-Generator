@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>TimeCard Generator</title>
-  <meta name="description" content="Enter your days and hours, sign, and download a clean, print-ready time card PDF. Works on any phone. Nothing you type leaves your device.">
+  <meta name="description" content="Enter your days and hours and download a signed, print-ready time card PDF. Works on any phone. Nothing you type leaves your device.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#0f766e" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0c1211" media="(prefers-color-scheme: dark)">
@@ -52,7 +52,7 @@
   <main id="main" class="wrap">
     <section class="intro">
       <h1>Your time card, ready in a minute.</h1>
-      <p>Enter the days you worked, sign, and download a clean PDF that's ready to print or send.</p>
+      <p>Enter the days you worked and download a signed, clean PDF that's ready to print or send.</p>
     </section>
 
     <form id="tc-form" novalidate autocomplete="off">
@@ -62,14 +62,14 @@
           <span class="step" aria-hidden="true">1</span>
           <div>
             <h2 id="details-h">Your details</h2>
-            <p class="panel-sub">These appear at the top of every card.</p>
+            <p class="panel-sub">These appear on every card. Your name is also used as your signature.</p>
           </div>
         </div>
 
         <div class="details-grid">
           <div class="field field-name">
             <label for="f-name">Full name <span class="tag">Required</span></label>
-            <input id="f-name" name="name" type="text" autocomplete="name" autocapitalize="words" spellcheck="false" maxlength="80" aria-describedby="f-name-err">
+            <input id="f-name" name="name" type="text" placeholder="e.g. Jose Garcia" autocomplete="name" autocapitalize="words" spellcheck="false" maxlength="80" aria-describedby="f-name-err">
             <p class="field-err" id="f-name-err" aria-live="polite"></p>
           </div>
           <div class="field">
@@ -95,7 +95,7 @@
           <span class="step" aria-hidden="true">2</span>
           <div>
             <h2 id="hours-h">Days worked</h2>
-            <p class="panel-sub">Lunch times are optional. Each card prints on its own page.</p>
+            <p class="panel-sub">Lunch times are optional. Each card prints on its own page, signed and dated with its last day.</p>
           </div>
         </div>
 
@@ -113,58 +113,6 @@
         </div>
       </section>
 
-      <!-- Step 3 -->
-      <section class="panel" aria-labelledby="sign-h">
-        <div class="panel-head">
-          <span class="step" aria-hidden="true">3</span>
-          <div>
-            <h2 id="sign-h">Sign</h2>
-            <p class="panel-sub">Each card is dated with its last day worked.</p>
-          </div>
-        </div>
-
-        <div class="segmented" role="radiogroup" aria-label="Signature style">
-          <label><input type="radio" name="sig-mode" value="type" checked><span>Type my name</span></label>
-          <label><input type="radio" name="sig-mode" value="draw"><span>Draw signature</span></label>
-        </div>
-
-        <div id="sig-type" class="sig-type">
-          <div class="sig-preview" aria-live="polite">
-            <span id="sig-typed" class="sig-typed"></span>
-            <span class="sig-line" aria-hidden="true"></span>
-            <span class="sig-caption">Employee signature</span>
-          </div>
-        </div>
-
-        <div id="sig-draw" class="sig-draw" hidden>
-          <div class="pad-wrap">
-            <canvas id="sig-pad" class="pad" aria-label="Signature pad. Draw your signature with your finger, stylus or mouse." role="img"></canvas>
-            <span class="pad-hint" id="pad-hint" aria-hidden="true">Sign here</span>
-            <span class="sig-line pad-line" aria-hidden="true"></span>
-          </div>
-          <div class="pad-actions">
-            <button type="button" class="btn btn-text btn-sm" data-action="clear-sig">
-              <svg class="i" aria-hidden="true"><use href="#i-x"/></svg>
-              Clear signature
-            </button>
-          </div>
-          <p class="field-err" id="sig-err" aria-live="polite"></p>
-        </div>
-
-        <fieldset class="options">
-          <legend>PDF options</legend>
-          <label class="switch">
-            <input id="opt-hours" type="checkbox" checked>
-            <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
-            <span>Show hours and totals</span>
-          </label>
-          <label class="switch">
-            <input id="opt-supervisor" type="checkbox">
-            <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
-            <span>Add a supervisor signature line</span>
-          </label>
-        </fieldset>
-      </section>
     </form>
 
     <footer class="site-footer">

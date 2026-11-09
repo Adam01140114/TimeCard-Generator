@@ -1,7 +1,8 @@
 /* TimeCard Generator
  * Everything runs in the browser. Dates and times are never stored or pre-filled:
- * every day starts empty. Only the optional "Your details" fields and the PDF
- * option switches are kept in localStorage, and only when the user asks for it.
+ * every day starts empty. Only the optional "Your details" fields are kept in
+ * localStorage, and only when the user asks for it.
+ * The employee's name is signed on each card in a script font (Alex Brush, SIL OFL).
  */
 (() => {
   'use strict';
@@ -9,10 +10,8 @@
   // ---------- Small helpers ----------
 
   const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   const KEY_DETAILS = 'tcg.details.v1';
-  const KEY_PREFS = 'tcg.prefs.v1';
 
   const store = {
     get(key) {
@@ -34,10 +33,40 @@
 
   const state = {
     cards: [newCard()],
-    sigMode: 'type',
-    strokes: [], // each stroke: array of [x, y] in CSS pixels of the pad
     attempted: false, // becomes true after the first Download/Preview/Share
   };
+
+  // ---------- Signature font ----------
+
+  const SIG_FONT = { url: 'vendor/fonts/AlexBrush-Regular.ttf', file: 'AlexBrush-Regular.ttf', name: 'AlexBrush' };
+  let sigFontData = null; // base64 TTF, once loaded
+  let sigFontLoading = null;
+
+  function toBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(binary);
+  }
+
+  function loadSigFont() {
+    if (sigFontData) return Promise.resolve();
+    if (!sigFontLoading) {
+      sigFontLoading = fetch(SIG_FONT.url)
+        .then((res) => {
+          if (!res.ok) throw new Error(`Font request failed: ${res.status}`);
+          return res.arrayBuffer();
+        })
+        .then((buffer) => { sigFontData = toBase64(buffer); })
+        .catch((err) => {
+          console.warn('Signature font unavailable, using a fallback.', err);
+          sigFontLoading = null;
+        });
+    }
+    return sigFontLoading;
+  }
 
   // ---------- Time & date ----------
 
@@ -123,12 +152,10 @@
         }
         if (lunchOk) minutes = end - tin - lunch;
       }
-    } else {
+    } else if ((ls == null) !== (le == null)) {
       // Still flag a half-entered lunch so the user sees it early.
-      if ((ls == null) !== (le == null)) {
-        if (ls == null) errors.lunchStart = 'Add the lunch start, or clear the lunch end.';
-        else errors.lunchEnd = 'Add the lunch end, or clear the lunch start.';
-      }
+      if (ls == null) errors.lunchStart = 'Add the lunch start, or clear the lunch end.';
+      else errors.lunchEnd = 'Add the lunch end, or clear the lunch start.';
     }
 
     return { minutes, overnight, errors };
@@ -147,15 +174,7 @@
   const positionInput = $('#f-position');
   const companyInput = $('#f-company');
   const rememberInput = $('#f-remember');
-  const optHours = $('#opt-hours');
-  const optSupervisor = $('#opt-supervisor');
   const grandTotalEl = $('#grand-total');
-  const sigTyped = $('#sig-typed');
-  const sigTypeBox = $('#sig-type');
-  const sigDrawBox = $('#sig-draw');
-  const pad = $('#sig-pad');
-  const padWrap = pad.parentElement;
-  const sigErr = $('#sig-err');
   const toastEl = $('#toast');
   const shareBtn = $('[data-action="share"]');
 
@@ -256,13 +275,10 @@
     if (!cardEl) return;
     const dates = sortedDates(card);
     $('.tc-card-range', cardEl).textContent = dates.length ? fmtRange(dates) : 'No dates yet';
-    const mins = cardMinutes(card);
     const total = $('.tc-card-total', cardEl);
-    total.innerHTML = '';
-    total.append('Card total ');
     const strong = document.createElement('strong');
-    strong.textContent = `${fmtHours(mins)} h`;
-    total.append(strong);
+    strong.textContent = `${fmtHours(cardMinutes(card))} h`;
+    total.replaceChildren('Card total ', strong);
   }
 
   function updateGrandTotal() {
@@ -270,19 +286,12 @@
     grandTotalEl.textContent = fmtHours(mins);
   }
 
-  function updateNameUI() {
-    const name = nameInput.value.trim();
-    sigTyped.textContent = name || 'Your name will appear here';
-    sigTyped.classList.toggle('is-empty', !name);
-    if (state.attempted) showNameError(!name);
-  }
-
   function showNameError(show) {
     const field = nameInput.closest('.field');
     field.classList.toggle('is-invalid', show);
     if (show) nameInput.setAttribute('aria-invalid', 'true');
     else nameInput.removeAttribute('aria-invalid');
-    $('#f-name-err').textContent = show ? 'Enter your full name.' : '';
+    $('#f-name-err').textContent = show ? 'Enter your full name. It is also used as your signature.' : '';
   }
 
   const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -380,16 +389,12 @@
         if (filled && !window.confirm('Clear all days and times? Your details stay.')) return;
         state.cards = [newCard()];
         state.attempted = false;
-        clearSignature();
         showNameError(false);
         render();
         window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
         toast('Cleared. Ready for a new time card.');
         break;
       }
-      case 'clear-sig':
-        clearSignature();
-        break;
       case 'preview':
         createPdf('preview');
         break;
@@ -416,12 +421,6 @@
       companyInput.value = typeof saved.company === 'string' ? saved.company : '';
       rememberInput.checked = true;
     }
-    const prefs = store.get(KEY_PREFS);
-    if (prefs && typeof prefs === 'object') {
-      if (typeof prefs.hours === 'boolean') optHours.checked = prefs.hours;
-      if (typeof prefs.supervisor === 'boolean') optSupervisor.checked = prefs.supervisor;
-      if (prefs.sigMode === 'draw' || prefs.sigMode === 'type') setSigMode(prefs.sigMode);
-    }
   }
 
   function saveDetails() {
@@ -436,154 +435,15 @@
     }
   }
 
-  function savePrefs() {
-    store.set(KEY_PREFS, { hours: optHours.checked, supervisor: optSupervisor.checked, sigMode: state.sigMode });
-  }
-
   [nameInput, positionInput, companyInput].forEach((input) => {
     input.addEventListener('input', () => {
-      if (input === nameInput) updateNameUI();
+      if (input === nameInput && state.attempted) showNameError(!nameInput.value.trim());
       saveDetails();
     });
   });
   rememberInput.addEventListener('change', () => {
     saveDetails();
     toast(rememberInput.checked ? 'Your details will be remembered on this device' : 'Saved details removed from this device');
-  });
-  optHours.addEventListener('change', savePrefs);
-  optSupervisor.addEventListener('change', savePrefs);
-
-  // ---------- Signature ----------
-
-  $$('input[name="sig-mode"]').forEach((radio) => {
-    radio.addEventListener('change', () => {
-      if (radio.checked) {
-        setSigMode(radio.value);
-        savePrefs();
-      }
-    });
-  });
-
-  function setSigMode(mode) {
-    state.sigMode = mode;
-    $$('input[name="sig-mode"]').forEach((r) => { r.checked = r.value === mode; });
-    sigTypeBox.hidden = mode !== 'type';
-    sigDrawBox.hidden = mode !== 'draw';
-    if (mode === 'draw') requestAnimationFrame(resizePad);
-    showSigError(false);
-  }
-
-  function showSigError(show) {
-    padWrap.classList.toggle('is-invalid', show);
-    sigErr.textContent = show ? 'Draw your signature, or switch to "Type my name".' : '';
-  }
-
-  const ctx = pad.getContext('2d');
-  let drawing = null;
-
-  function resizePad() {
-    const rect = pad.getBoundingClientRect();
-    if (!rect.width) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    pad.width = Math.round(rect.width * dpr);
-    pad.height = Math.round(rect.height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    redrawPad();
-  }
-
-  function strokeStyle(context, scale = 1) {
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    context.strokeStyle = '#1a2b5c';
-    context.lineWidth = 2.6 * scale;
-  }
-
-  function drawStroke(context, points, scale = 1, offsetX = 0, offsetY = 0) {
-    if (!points.length) return;
-    const p = (i) => [(points[i][0] - offsetX) * scale, (points[i][1] - offsetY) * scale];
-    context.beginPath();
-    const [x0, y0] = p(0);
-    context.moveTo(x0, y0);
-    if (points.length === 1) {
-      context.lineTo(x0 + 0.01, y0 + 0.01);
-    } else {
-      for (let i = 1; i < points.length - 1; i++) {
-        const [x1, y1] = p(i);
-        const [x2, y2] = p(i + 1);
-        context.quadraticCurveTo(x1, y1, (x1 + x2) / 2, (y1 + y2) / 2);
-      }
-      const [xl, yl] = p(points.length - 1);
-      context.lineTo(xl, yl);
-    }
-    context.stroke();
-  }
-
-  function redrawPad() {
-    const rect = pad.getBoundingClientRect();
-    ctx.clearRect(0, 0, rect.width, rect.height);
-    strokeStyle(ctx);
-    state.strokes.forEach((s) => drawStroke(ctx, s));
-    padWrap.classList.toggle('has-ink', state.strokes.length > 0);
-  }
-
-  function padPoint(e) {
-    const rect = pad.getBoundingClientRect();
-    return [e.clientX - rect.left, e.clientY - rect.top];
-  }
-
-  pad.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
-    e.preventDefault();
-    pad.setPointerCapture(e.pointerId);
-    drawing = [padPoint(e)];
-    state.strokes.push(drawing);
-    redrawPad();
-    showSigError(false);
-  });
-  pad.addEventListener('pointermove', (e) => {
-    if (!drawing) return;
-    e.preventDefault();
-    const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [e];
-    (events.length ? events : [e]).forEach((ev) => drawing.push(padPoint(ev)));
-    redrawPad();
-  });
-  const endStroke = () => { drawing = null; };
-  pad.addEventListener('pointerup', endStroke);
-  pad.addEventListener('pointercancel', endStroke);
-  pad.addEventListener('lostpointercapture', endStroke);
-
-  function clearSignature() {
-    state.strokes = [];
-    drawing = null;
-    redrawPad();
-  }
-
-  /** Render the drawn signature, cropped to its ink, as a PNG data URL. */
-  function signatureImage() {
-    if (!state.strokes.length) return null;
-    let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity;
-    state.strokes.forEach((s) => s.forEach(([x, y]) => {
-      minX = Math.min(minX, x); minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
-    }));
-    const padding = 6;
-    minX -= padding; minY -= padding; maxX += padding; maxY += padding;
-    const scale = 4;
-    const w = Math.max(1, Math.ceil((maxX - minX) * scale));
-    const h = Math.max(1, Math.ceil((maxY - minY) * scale));
-    const off = document.createElement('canvas');
-    off.width = w;
-    off.height = h;
-    const c = off.getContext('2d');
-    strokeStyle(c, scale);
-    state.strokes.forEach((s) => drawStroke(c, s, scale, minX, minY));
-    return { data: off.toDataURL('image/png'), width: w / scale, height: h / scale };
-  }
-
-  let resizeTimer = 0;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { if (!sigDrawBox.hidden) resizePad(); }, 120);
   });
 
   // ---------- Validation ----------
@@ -608,23 +468,18 @@
       });
     });
 
-    const needsInk = state.sigMode === 'draw' && !state.strokes.length;
-    showSigError(needsInk);
-    if (needsInk && !first) first = pad;
-
     return first;
   }
 
   function countProblems() {
     let n = nameInput.value.trim() ? 0 : 1;
     state.cards.forEach((c) => c.days.forEach((d) => { if (Object.keys(analyzeDay(d).errors).length) n += 1; }));
-    if (state.sigMode === 'draw' && !state.strokes.length) n += 1;
     return n;
   }
 
   // ---------- PDF ----------
 
-  /** jsPDF's built-in fonts cover Latin-1. Swap common typographic characters and drop anything else. */
+  /** The PDF fonts cover Latin-1. Swap common typographic characters and drop anything else. */
   function pdfSafe(text) {
     return String(text || '')
       .normalize('NFC')
@@ -642,6 +497,17 @@
     let t = text;
     while (t.length > 1 && doc.getTextWidth(`${t}...`) > maxWidth) t = t.slice(0, -1);
     return `${t.trimEnd()}...`;
+  }
+
+  /** Shrink the font until the text fits, down to a minimum size. */
+  function fitFontSize(doc, text, maxWidth, size, minSize) {
+    let s = size;
+    doc.setFontSize(s);
+    while (s > minSize && doc.getTextWidth(text) > maxWidth) {
+      s -= 1;
+      doc.setFontSize(s);
+    }
+    return s;
   }
 
   const COLORS = {
@@ -670,9 +536,17 @@
     const name = pdfSafe(nameInput.value);
     const position = pdfSafe(positionInput.value);
     const company = pdfSafe(companyInput.value);
-    const showHours = optHours.checked;
-    const supervisor = optSupervisor.checked;
-    const sigImg = state.sigMode === 'draw' ? signatureImage() : null;
+
+    let sigFont = null;
+    if (sigFontData) {
+      try {
+        doc.addFileToVFS(SIG_FONT.file, sigFontData);
+        doc.addFont(SIG_FONT.file, SIG_FONT.name, 'normal');
+        sigFont = SIG_FONT.name;
+      } catch (err) {
+        console.warn('Could not embed the signature font, using a fallback.', err);
+      }
+    }
 
     doc.setProperties({
       title: `Time card - ${name}`,
@@ -689,7 +563,7 @@
 
     // Column layout
     const dateW = 132;
-    const hoursW = showHours ? 72 : 0;
+    const hoursW = 72;
     const timeW = (CONTENT_W - dateW - hoursW) / 4;
     const cols = [
       { key: 'date', label: 'DATE', w: dateW, align: 'left' },
@@ -697,15 +571,16 @@
       { key: 'timeOut', label: 'TIME OUT', w: timeW, align: 'center' },
       { key: 'lunchStart', label: 'LUNCH START', w: timeW, align: 'center' },
       { key: 'lunchEnd', label: 'LUNCH END', w: timeW, align: 'center' },
+      { key: 'hours', label: 'HOURS', w: hoursW, align: 'right' },
     ];
-    if (showHours) cols.push({ key: 'hours', label: 'HOURS', w: hoursW, align: 'right' });
     let cx = M;
     cols.forEach((c) => { c.x = cx; cx += c.w; });
+    const hoursCol = cols[cols.length - 1];
 
     const HEAD_H = 30;
     const ROW_H = 26;
     const TOTAL_H = 30;
-    const SIG_H = supervisor ? 160 : 80;
+    const SIG_H = 80;
 
     const cellText = (col, text, baseline) => {
       if (col.align === 'left') doc.text(text, col.x + 12, baseline);
@@ -786,20 +661,18 @@
       const dateX = M + sigW + 36;
       const lineY = y + 50;
 
-      // Employee signature
-      if (sigImg) {
-        const maxW = sigW - 16;
-        const maxH = 46;
-        const ratio = Math.min(maxW / sigImg.width, maxH / sigImg.height, 1.6);
-        const w = sigImg.width * ratio;
-        const h = sigImg.height * ratio;
-        doc.addImage(sigImg.data, 'PNG', M + 6, lineY - h - 2, w, h, undefined, 'FAST');
+      // The employee's name, signed in a script font.
+      color(COLORS.sig);
+      if (sigFont) {
+        doc.setFont(sigFont, 'normal');
+        fitFontSize(doc, name, sigW - 16, 30, 16);
+        doc.text(name, M + 8, lineY - 9);
       } else {
         doc.setFont('times', 'bolditalic');
         doc.setFontSize(21);
-        color(COLORS.sig);
         doc.text(fitText(doc, name, sigW - 12), M + 6, lineY - 9);
       }
+
       font('normal', 11.5);
       color(COLORS.ink);
       doc.text(signDate, dateX + 4, lineY - 9);
@@ -812,15 +685,6 @@
       color(COLORS.faint);
       doc.text('Employee signature', M, lineY + 13);
       doc.text('Date', dateX, lineY + 13);
-
-      if (supervisor) {
-        const l2 = lineY + 76;
-        draw(COLORS.rule);
-        doc.line(M, l2, M + sigW, l2);
-        doc.line(dateX, l2, PAGE_W - M, l2);
-        doc.text('Supervisor signature', M, l2 + 13);
-        doc.text('Date', dateX, l2 + 13);
-      }
     }
 
     state.cards.forEach((card, ci) => {
@@ -877,34 +741,30 @@
         y += ROW_H;
       });
 
-      if (showHours) {
-        if (y + TOTAL_H > BOTTOM) {
-          drawGrid(top, y, rowLines);
-          doc.addPage();
-          y = drawCardHeader(ci, state.cards.length, range, true);
-          top = y;
-          rowLines = [];
-        } else {
-          rowLines.push(y);
-        }
-        const hoursCol = cols[cols.length - 1];
-        fill(COLORS.box);
-        doc.rect(M, y, CONTENT_W, TOTAL_H, 'F');
-        font('bold', 7.5);
-        color(COLORS.sub);
-        doc.text('TOTAL HOURS', hoursCol.x - 12, y + 19, { align: 'right', charSpace: 0.8 });
-        font('bold', 11.5);
-        color(COLORS.ink);
-        cellText(hoursCol, fmtHours(total), y + 19.5);
+      // Total row
+      if (y + TOTAL_H > BOTTOM) {
         drawGrid(top, y, rowLines);
-        draw(COLORS.rule);
-        doc.setLineWidth(0.9);
-        doc.rect(M, y, CONTENT_W, TOTAL_H, 'S');
-        doc.line(hoursCol.x, y, hoursCol.x, y + TOTAL_H);
-        y += TOTAL_H;
+        doc.addPage();
+        y = drawCardHeader(ci, state.cards.length, range, true);
+        top = y;
+        rowLines = [];
       } else {
-        drawGrid(top, y, rowLines);
+        rowLines.push(y);
       }
+      fill(COLORS.box);
+      doc.rect(M, y, CONTENT_W, TOTAL_H, 'F');
+      font('bold', 7.5);
+      color(COLORS.sub);
+      doc.text('TOTAL HOURS', hoursCol.x - 12, y + 19, { align: 'right', charSpace: 0.8 });
+      font('bold', 11.5);
+      color(COLORS.ink);
+      cellText(hoursCol, fmtHours(total), y + 19.5);
+      drawGrid(top, y, rowLines);
+      draw(COLORS.rule);
+      doc.setLineWidth(0.9);
+      doc.rect(M, y, CONTENT_W, TOTAL_H, 'S');
+      doc.line(hoursCol.x, y, hoursCol.x, y + TOTAL_H);
+      y += TOTAL_H;
 
       // Signature block: keep it with the table, or move it to its own page.
       let sigY = y + 40;
@@ -939,7 +799,7 @@
     return `${base}_${kind}${last ? `_${last}` : ''}.pdf`;
   }
 
-  function createPdf(action) {
+  async function createPdf(action) {
     const first = validateAll();
     if (first) {
       const n = countProblems();
@@ -951,6 +811,10 @@
     if (!window.jspdf || !window.jspdf.jsPDF) {
       toast('The PDF engine is still loading. Try again in a moment.', true);
       return;
+    }
+    // The font is preloaded at startup; only wait for it if it hasn't arrived yet.
+    if (!sigFontData) {
+      await Promise.race([loadSigFont(), new Promise((r) => setTimeout(r, 4000))]);
     }
 
     let doc;
@@ -1020,6 +884,6 @@
   // ---------- Start ----------
 
   loadDetails();
-  updateNameUI();
   render();
+  loadSigFont();
 })();

@@ -2,13 +2,14 @@
  * Network first, so updates show up right away; the cache is only a fallback
  * for when there is no connection.
  */
-const CACHE = 'tcg-v1';
+const CACHE = 'tcg-v2';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './vendor/jspdf.umd.min.js',
+  './vendor/fonts/AlexBrush-Regular.ttf',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',
