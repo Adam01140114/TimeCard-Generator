@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>TimeCard Generator</title>
+  <meta name="description" content="Enter your days and hours, sign, and download a clean, print-ready time card PDF. Works on any phone. Nothing you type leaves your device.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f766e" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c1211" media="(prefers-color-scheme: dark)">
+  <meta property="og:title" content="TimeCard Generator">
+  <meta property="og:description" content="Fill in your hours and download a signed, print-ready time card PDF in a minute.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="TimeCard">
+  <link rel="stylesheet" href="styles.css">
+  <script src="vendor/jspdf.umd.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M18 7l-.8 12.2a2 2 0 0 1-2 1.8H8.8a2 2 0 0 1-2-1.8L6 7M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3M7.5 7.5 12 3l4.5 4.5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5M5 20h14"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  </svg>
+
+  <a class="skip-link" href="#main">Skip to the form</a>
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="./" aria-label="TimeCard Generator home">
+        <img class="brand-mark" src="icons/icon.svg" alt="" width="32" height="32">
+        <span class="brand-name">TimeCard Generator</span>
+      </a>
+      <span class="privacy-pill" title="Everything stays in your browser. Nothing is uploaded.">
+        <svg class="i" aria-hidden="true"><use href="#i-lock"/></svg>
+        <span>Private<span class="hide-xs">: stays on your device</span></span>
+      </span>
+    </div>
+  </header>
+
+  <main id="main" class="wrap">
+    <section class="intro">
+      <h1>Your time card, ready in a minute.</h1>
+      <p>Enter the days you worked, sign, and download a clean PDF that's ready to print or send.</p>
+    </section>
+
+    <form id="tc-form" novalidate autocomplete="off">
+      <!-- Step 1 -->
+      <section class="panel" aria-labelledby="details-h">
+        <div class="panel-head">
+          <span class="step" aria-hidden="true">1</span>
+          <div>
+            <h2 id="details-h">Your details</h2>
+            <p class="panel-sub">These appear at the top of every card.</p>
+          </div>
+        </div>
+
+        <div class="details-grid">
+          <div class="field field-name">
+            <label for="f-name">Full name <span class="tag">Required</span></label>
+            <input id="f-name" name="name" type="text" autocomplete="name" autocapitalize="words" spellcheck="false" maxlength="80" aria-describedby="f-name-err">
+            <p class="field-err" id="f-name-err" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="f-position">Position or heading</label>
+            <input id="f-position" name="position" type="text" placeholder="e.g. Temp help" autocapitalize="sentences" maxlength="60">
+          </div>
+          <div class="field">
+            <label for="f-company">Company or department</label>
+            <input id="f-company" name="company" type="text" placeholder="e.g. Hauling Services" autocomplete="organization" autocapitalize="words" maxlength="80">
+          </div>
+        </div>
+
+        <label class="check">
+          <input id="f-remember" type="checkbox">
+          <span class="check-box" aria-hidden="true"></span>
+          <span>Remember my details on this device <span class="muted">(dates and times are never saved)</span></span>
+        </label>
+      </section>
+
+      <!-- Step 2 -->
+      <section class="panel" aria-labelledby="hours-h">
+        <div class="panel-head">
+          <span class="step" aria-hidden="true">2</span>
+          <div>
+            <h2 id="hours-h">Days worked</h2>
+            <p class="panel-sub">Lunch times are optional. Each card prints on its own page.</p>
+          </div>
+        </div>
+
+        <div id="cards" class="cards"></div>
+
+        <div class="cards-actions">
+          <button type="button" class="btn btn-outline" data-action="add-card">
+            <svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>
+            Add another card
+          </button>
+          <button type="button" class="btn btn-text" data-action="reset">
+            <svg class="i" aria-hidden="true"><use href="#i-undo"/></svg>
+            Start over
+          </button>
+        </div>
+      </section>
+
+      <!-- Step 3 -->
+      <section class="panel" aria-labelledby="sign-h">
+        <div class="panel-head">
+          <span class="step" aria-hidden="true">3</span>
+          <div>
+            <h2 id="sign-h">Sign</h2>
+            <p class="panel-sub">Each card is dated with its last day worked.</p>
+          </div>
+        </div>
+
+        <div class="segmented" role="radiogroup" aria-label="Signature style">
+          <label><input type="radio" name="sig-mode" value="type" checked><span>Type my name</span></label>
+          <label><input type="radio" name="sig-mode" value="draw"><span>Draw signature</span></label>
+        </div>
+
+        <div id="sig-type" class="sig-type">
+          <div class="sig-preview" aria-live="polite">
+            <span id="sig-typed" class="sig-typed"></span>
+            <span class="sig-line" aria-hidden="true"></span>
+            <span class="sig-caption">Employee signature</span>
+          </div>
+        </div>
+
+        <div id="sig-draw" class="sig-draw" hidden>
+          <div class="pad-wrap">
+            <canvas id="sig-pad" class="pad" aria-label="Signature pad. Draw your signature with your finger, stylus or mouse." role="img"></canvas>
+            <span class="pad-hint" id="pad-hint" aria-hidden="true">Sign here</span>
+            <span class="sig-line pad-line" aria-hidden="true"></span>
+          </div>
+          <div class="pad-actions">
+            <button type="button" class="btn btn-text btn-sm" data-action="clear-sig">
+              <svg class="i" aria-hidden="true"><use href="#i-x"/></svg>
+              Clear signature
+            </button>
+          </div>
+          <p class="field-err" id="sig-err" aria-live="polite"></p>
+        </div>
+
+        <fieldset class="options">
+          <legend>PDF options</legend>
+          <label class="switch">
+            <input id="opt-hours" type="checkbox" checked>
+            <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            <span>Show hours and totals</span>
+          </label>
+          <label class="switch">
+            <input id="opt-supervisor" type="checkbox">
+            <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            <span>Add a supervisor signature line</span>
+          </label>
+        </fieldset>
+      </section>
+    </form>
+
+    <footer class="site-footer">
+      <p>Everything you enter stays in this browser. PDFs are created on your device and never uploaded.</p>
+      <p><a href="https://github.com/Adam01140114/TimeCard-Generator">Source on GitHub</a></p>
+    </footer>
+  </main>
+
+  <div class="actionbar" role="region" aria-label="Create PDF">
+    <div class="wrap actionbar-inner">
+      <div class="grand">
+        <span class="grand-label">Total hours</span>
+        <span class="grand-value" id="grand-total" aria-live="polite">0.00</span>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-secondary btn-icon-sm" data-action="preview" aria-label="Preview PDF">
+          <svg class="i" aria-hidden="true"><use href="#i-eye"/></svg>
+          <span class="btn-label">Preview</span>
+        </button>
+        <button type="button" class="btn btn-secondary btn-icon-sm" data-action="share" aria-label="Share PDF" hidden>
+          <svg class="i" aria-hidden="true"><use href="#i-share"/></svg>
+          <span class="btn-label">Share</span>
+        </button>
+        <button type="submit" form="tc-form" class="btn btn-primary">
+          <svg class="i" aria-hidden="true"><use href="#i-download"/></svg>
+          Download PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <template id="tpl-card">
+    <article class="tc-card">
+      <header class="tc-card-head">
+        <div class="tc-card-title">
+          <h3 class="tc-card-name"></h3>
+          <span class="tc-card-range"></span>
+        </div>
+        <button type="button" class="icon-btn" data-action="remove-card">
+          <svg class="i" aria-hidden="true"><use href="#i-trash"/></svg>
+        </button>
+      </header>
+      <ol class="days"></ol>
+      <footer class="tc-card-foot">
+        <button type="button" class="btn btn-soft" data-action="add-day">
+          <svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>
+          Add day
+        </button>
+        <span class="tc-card-total"></span>
+      </footer>
+    </article>
+  </template>
+
+  <template id="tpl-day">
+    <li class="day">
+      <div class="day-head">
+        <span class="day-title"><span class="day-num"></span><span class="day-weekday"></span></span>
+        <span class="day-hours"></span>
+        <button type="button" class="icon-btn icon-btn-sm" data-action="remove-day">
+          <svg class="i" aria-hidden="true"><use href="#i-x"/></svg>
+        </button>
+      </div>
+      <div class="day-grid">
+        <div class="field f-date">
+          <label data-for="date">Date</label>
+          <input type="date" data-field="date" autocomplete="off">
+        </div>
+        <div class="field">
+          <label data-for="timeIn">Time in</label>
+          <input type="time" data-field="timeIn" autocomplete="off">
+        </div>
+        <div class="field">
+          <label data-for="timeOut">Time out</label>
+          <input type="time" data-field="timeOut" autocomplete="off">
+        </div>
+        <div class="field">
+          <label data-for="lunchStart">Lunch start</label>
+          <input type="time" data-field="lunchStart" autocomplete="off">
+        </div>
+        <div class="field">
+          <label data-for="lunchEnd">Lunch end</label>
+          <input type="time" data-field="lunchEnd" autocomplete="off">
+        </div>
+      </div>
+      <p class="day-err" aria-live="polite"></p>
+      <button type="button" class="btn btn-text btn-sm day-copy" data-action="copy-prev">
+        <svg class="i" aria-hidden="true"><use href="#i-copy"/></svg>
+        <span class="day-copy-label"></span>
+      </button>
+    </li>
+  </template>
+</body>
+</html>
